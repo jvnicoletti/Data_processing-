@@ -1,0 +1,75 @@
+library(rgdal)
+library(stringr)
+library(raster)
+library(sf)
+library(tidyverse)
+
+limite = readOGR(file.path("D:/Projeto Martello/limite/bound.shp"))
+img_list <- list();img_list
+img_list <-  list.files('D:/Projeto Martello/Descompactado/', full.names = T);img_list
+img_list2 <-  list.files(img_list, full.names = T);img_list2
+k <- img_list;k
+i <- seq_along(k);i
+
+for ( k in i) {
+  total <- list.files(img_list[k], full.names = TRUE);total
+  interesse <- str_subset(total, pattern = "B0[8].jp2");interesse
+  r1 <- raster(interesse);r1
+  rst_mask = mask(crop(r1, limite), limite)
+  
+  # Calcula o NDVI a partir da imagem:
+  
+  out <- paste0('D:/Projeto Martello/B8_filtragem/' ,basename(img_list[k]));out
+  
+  writeRaster(rst_mask, out,format = 'GTiff',overwrite = T)
+  }
+
+interesse_b8 <- list.files('D:/Projeto Martello/B8_filtragem/', full.names = T);interesse_b8
+img_f <- raster::stack(interesse_b8);img_f
+class(img_f)
+
+## Transforma as imagens em pontos:
+img_f_pts <-st_as_sf(rasterToPoints(img_f,spatial = TRUE,full.names = T));img_f_pts
+#renomeando para tirar o X
+nameVec <- names(img_f_pts);nameVec
+nameVec <- gsub("X","",nameVec);nameVec
+names(img_f_pts) <- nameVec;img_f_pts
+
+#img_f_pts <- st_set_geometry(img_f_pts, NULL)
+tab_b8 <- img_f_pts ;tab_b8
+tab_b8_sgeo <- st_set_geometry(tab_b8, NULL);tab_b8_sgeo
+media <- apply(tab_b8_sgeo, 2, mean, na.rm = TRUE);media
+des.pad <- apply(tab_b8_sgeo, 2, sd, na.rm = TRUE);des.pad
+cv <- apply(tab_b8_sgeo, 2, cv, na.rm = TRUE);cv
+min <- apply(tab_b8_sgeo, 2, min, na.rm = TRUE);min
+max <- apply(tab_b8_sgeo, 2, max, na.rm = TRUE);max
+var <- apply(tab_b8_sgeo, 2, var, na.rm = TRUE);var
+
+View(media)
+View(des.pad)
+View(cv)
+uniao <- cbind(media,des.pad,cv,min,max,var);uniao
+
+uniao1 <- uniao %>% subset(var<80000);uniao1
+
+img_filtered <-row.names(uniao1);img_filtered
+img_filtered2 <- basename(img_filtered);img_filtered2
+img_list2 <-  list.files('D:/Projeto Martello/Descompactado/', full.names = F);img_list2
+img_delete <- row.names(uniao %>% subset(var>80000));img_delete
+img_delete2 <- row.names(uniao %>% subset(media>4500));img_delete2
+img_delete <- c(img_delete,img_delete2);img_delete
+img_delete <- unique(img_delete);img_delete
+
+names <- img_delete;names
+ano <- str_sub((str_split(names,'_')),1,4);ano
+mes <- str_sub((str_split(names,'_')),5,6);mes
+dia <- str_sub((str_split(names,'_')),7,8);dia
+data <- paste0(dia,"-",mes,"-",ano);data
+img_delete <- data;img_delete
+
+img_delete <- paste0(basename(img_delete),".tif");img_delete
+i <- seq_along(img_delete);i
+for (img_list in i) {
+   out <- paste0('D:/Projeto Martello/Descompactado/' ,basename(img_delete[img_list]));out
+   unlink(out,recursive = F)
+   }
