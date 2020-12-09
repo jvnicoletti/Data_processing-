@@ -1,0 +1,127 @@
+library(rgdal)
+library(raster)
+library(reshape)
+library(sf)
+library(stringr)
+library(readxl)
+library(tidyverse)
+library(xlsx)
+library(moments)
+library(lubridate)
+
+
+setwd('G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/')
+
+diretorio = "G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/"
+index = list.files("G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/Resultado/",full.names = T);index
+c=1;c
+while (c<=length(index)) {
+lista_index = list.files(index[c],full.names = T,pattern = "Geral.csv");lista_index
+csv = read.csv(lista_index);csv
+csv = csv[,-1];csv
+names(csv) = gsub("X","",names(csv));csv
+
+datas = names(csv);datas
+datas = gsub("\\.","-",datas);datas
+names(csv) = datas;csv
+
+datas = as.POSIXct(datas,format = "%d-%m-%Y", tz = "UTC");datas
+
+
+datas_2016 = datas[datas >= as.POSIXct("2016/06/01 ", tz="UTC") & datas <= as.POSIXct("2016/08/31", tz="UTC")];datas_2016
+datas_2017 = datas[datas >= as.POSIXct("2017/06/01 ", tz="UTC") & datas <= as.POSIXct("2017/08/31", tz="UTC")];datas_2017
+datas_2018 = datas[datas >= as.POSIXct("2018/06/01 ", tz="UTC") & datas <= as.POSIXct("2018/08/31", tz="UTC")];datas_2018
+datas_2019 = datas[datas >= as.POSIXct("2019/06/01 ", tz="UTC") & datas <= as.POSIXct("2019/08/31", tz="UTC")];datas_2019
+
+pares = gsub("UTC","",c(datas_2016,datas_2018));pares
+impares = gsub("UTC","",c(datas_2017,datas_2019));impares
+
+pares <- str_sub((str_split(pares,' ')),1,12);pares
+ano = str_sub((str_split(pares,' ')),1,4);ano
+mes = str_sub((str_split(pares,' ')),6,7);mes
+dia = str_sub((str_split(pares,' ')),9,10);dia
+pares = paste0(dia,"-",mes,"-",ano);pares
+
+impares <- str_sub((str_split(impares,' ')),1,12);impares
+ano = str_sub((str_split(impares,' ')),1,4);ano
+mes = str_sub((str_split(impares,' ')),6,7);mes
+dia = str_sub((str_split(impares,' ')),9,10);dia
+impares = paste0(dia,"-",mes,"-",ano);impares
+
+
+
+pares = csv[pares];pares
+impares = csv[impares];impares
+
+
+# realizando zoneamento para datas impares
+i = 1;
+while(i <= length(impares)){
+  if(i==1){
+  new.df.teste = ifelse(impares[i] >= mean(impares[,i]),yes = 1,no = 0);new.df.teste
+  new.df.final_impares_media = ifelse(impares[i] >= mean(impares[,i]),yes = 1,no = 0);new.df.final
+    i=i+1
+  }else{
+  new.df.teste <- ifelse(impares[i] >= mean(impares[,i]),yes = 1,no = 0);new.df.teste
+  new.df.final_impares_media = cbind(new.df.teste,new.df.final_impares_media);new.df.final_impares_media
+  i=i+1
+}}
+# realizando zoneamento para datas pares
+i = 1;
+while(i <= length(pares)){
+  if(i==1){
+    new.df.teste <- ifelse(pares[i] >= mean(pares[,i]),yes = 1,no = 0);new.df.teste
+    new.df.final_pares_media <- ifelse(pares[i] >= mean(pares[,i]),yes = 1,no = 0);new.df.final_pares_media
+    i=i+1
+  }else{
+    new.df.teste <- ifelse(pares[i] >= mean(pares[,i]),yes = 1,no = 0);new.df.teste
+    new.df.final_pares_media = cbind(new.df.teste,new.df.final_pares_media);new.df.final_pares_media
+    i=i+1
+  }}
+
+i = 1;
+while(i <= length(impares)){
+  if(i==1){
+    new.df.teste <- ifelse(impares[i] >= median(impares[,i]),yes = 1,no = 0);new.df.teste
+    new.df.final_impares_mediana <- ifelse(impares[i] >= median(impares[,i]),yes = 1,no = 0);new.df.final_impares_mediana
+    i=i+1
+  }else{
+    new.df.teste <- ifelse(impares[i] >= median(impares[,i]),yes = 1,no = 0);new.df.teste
+    new.df.final_impares_mediana = cbind(new.df.teste,new.df.final_impares_mediana);new.df.final_impares_mediana
+    i=i+1
+  }}
+# realizando zoneamento para datas pares
+i = 1;
+while(i <= length(pares)){
+  if(i==1){
+    new.df.teste <- ifelse(pares[i] >= median(pares[,i]),yes = 1,no = 0);new.df.teste
+    new.df.final_pares_mediana <- ifelse(pares[i] >= median(pares[,i]),yes = 1,no = 0);new.df.final_pares_mediana
+    i=i+1
+  }else{
+    new.df.teste <- ifelse(pares[i] >= median(pares[,i]),yes = 1,no = 0);new.df.teste
+    new.df.final_pares_mediana = cbind(new.df.teste,new.df.final_pares_mediana);new.df.final_pares_mediana
+    i=i+1
+  }}
+
+#separando coordenadas x e y
+csv_coord = list.files(index[c],full.names = T,pattern = "_est.csv");csv_coord
+csv_coord = read.csv(csv_coord);csv_coord
+
+x = csv_coord[,(length(csv_coord)-1)];x
+y = csv_coord[,length(csv_coord)];y
+
+new.df.final_pares_mediana = cbind(new.df.final_pares_mediana,x,y);new.df.final_pares_mediana
+new.df.final_impares_mediana = cbind(new.df.final_impares_mediana,x,y);new.df.final_impares_mediana
+
+new.df.final_pares_media = cbind(new.df.final_pares_media,x,y);new.df.final_pares_media
+new.df.final_impares_media = cbind(new.df.final_impares_media,x,y);new.df.final_impares_media
+
+path = paste0("G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/Zonas/");path
+
+write.csv(new.df.final_pares_mediana, paste0(path,basename(index[c]),"_pares_mediana.csv"))
+write.csv(new.df.final_pares_media, paste0(path,basename(index[c]),"_pares_media.csv"))
+write.csv(new.df.final_impares_mediana, paste0(path,basename(index[c]),"_impares_mediana.csv"))
+write.csv(new.df.final_impares_media, paste0(path,basename(index[c]),"_impares_media.csv"))
+c = c+1;c
+}
+
