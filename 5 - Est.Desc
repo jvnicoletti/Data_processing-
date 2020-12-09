@@ -1,0 +1,112 @@
+library(rgdal)
+library(raster)
+library(sf)
+library(tidyverse)
+library(reshape)
+library(moments)
+library(e1071)
+library(stringr)
+library(skimr)
+
+setwd('G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/')
+
+diretorio = "G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/"
+limite = readOGR("G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/limite/bound_UTM.shp")
+
+img_index <-  list.files(paste0(diretorio,"INDEX"), full.names = T);img_index
+j = 1;j
+
+dir.create(paste0(diretorio,"Resultado/","/NDVI/"))
+dir.create(paste0(diretorio,"Resultado/","/NDRE/"))
+dir.create(paste0(diretorio,"Resultado/","/MSI/"))
+dir.create(paste0(diretorio,"Resultado/","/SR/")) 
+dir.create(paste0(diretorio,"Resultado/","/NDWI/"))
+dir.create(paste0(diretorio,"Resultado/","/GNDVI/"))
+dir.create(paste0(diretorio,"Resultado/","/EVI/"))
+dir.create(paste0(diretorio,"Resultado/","/SAVI/"))
+dir.create(paste0(diretorio,"Resultado/","/IAF/"))
+dir.create(paste0(diretorio,"Resultado/","/NDI45/"))
+dir.create(paste0(diretorio,"Resultado/","/RVI/"))
+dir.create(paste0(diretorio,"Resultado/","/S2REP/"))
+dir.create(paste0(diretorio,"Resultado/","/IRECI/"))
+dir.create(paste0(diretorio,"Resultado/","/CHLRE/"))
+dir.create(paste0(diretorio,"Resultado/","/ARVI/"))
+dir.create(paste0(diretorio,"Resultado/","/WDRVI/"))
+dir.create(paste0(diretorio,"Resultado/","/GCI/"))
+dir.create(paste0(diretorio,"Resultado/","/RECI/"))
+dir.create(paste0(diretorio,"Resultado/","/MTCI/"))
+dir.create(paste0(diretorio,"Resultado/","/RENDVI/"))
+
+
+while (j<= length(img_index)) {
+  i=1;i
+  img_list <-  list.files(img_index[j], full.names = T);img_list
+
+while(i <= length(img_list)){
+
+img_f <- raster::stack(img_list[i]);img_f
+img_f_crop = mask(crop(img_f, limite), limite);img_f_crop
+## Transforma as imagens em pontos:
+img_f_pts <-st_as_sf(rasterToPoints(img_f_crop,spatial = TRUE,full.names = T));img_f_pts
+coords = img_f_pts$geometry;coords
+img_f_pts <- st_set_geometry(img_f_pts, NULL);img_f_pts
+
+names(img_f_pts) <- gsub(".tif","",str_split(img_list[i],"/")[[1]][9])
+
+#----------------------------------------------------------------------#
+#para cada píxel em todas as datas
+Coef_Variacao = cv(img_f_pts[,1])
+Summary = summary(img_f_pts[,1]);Summary
+skim = skim(img_f_pts[,1]);skim
+Desvio_Padrao = skim$numeric.sd;Desvio_Padrao
+hist = skim$numeric.hist
+Minimo = Summary[[1]]
+Maximo = Summary[[6]]
+Primeiro_Quartil = skim$numeric.p25;Primeiro_Quartil
+Mediana = skim$numeric.p50
+Media = skim$numeric.mean;Media
+Terceiro_Quartil = skim$numeric.p75
+Curtose = kurtosis(img_f_pts[,1])
+Assimetria = skewness(img_f_pts[,1])
+Soma = sum(img_f_pts[,1])
+Data = as.character(as.Date(str_split(img_list[i],"/")[[1]][9],tryFormats = c("%d-%m-%Y", "%d/%m/%Y")));Data
+if(i==1){
+uniao_parcial <- cbind(Data,Minimo,Maximo,Media,Mediana,Primeiro_Quartil,Terceiro_Quartil,Desvio_Padrao,Coef_Variacao,Curtose,Assimetria,Soma,hist);uniao_parcial
+uniao_final = uniao_parcial
+img_f_pts_final = img_f_pts
+i=i+1
+}else{
+uniao_parcial <- cbind(Data,Minimo,Maximo,Media,Mediana,Primeiro_Quartil,Terceiro_Quartil,Desvio_Padrao,Coef_Variacao,Curtose,Assimetria,Soma,hist);uniao_parcial
+uniao_final = rbind(uniao_parcial,uniao_final)
+img_f_pts_final = cbind(img_f_pts,img_f_pts_final)
+i=i+1
+}}
+  
+media <- apply(subset(img_f_pts_final), 1, mean, na.rm = TRUE);media
+des.pad <- apply(img_f_pts_final, 2, sd, na.rm = TRUE);des.pad
+cv <- apply(img_f_pts_final, 2, cv, na.rm = TRUE);cv
+cv <- round(cv, digits = 2);cv
+uniao <- cbind(media,des.pad,cv);uniao
+img_f_pts_est <- cbind(img_f_pts_final,uniao);img_f_pts_est
+
+pontos <-st_as_sf(rasterToPoints(raster(img_list[length(img_list)]),spatial = TRUE,full.names = T));img_f_pts
+coords = pontos$geometry;coords
+final1 <- sub(",","", unlist(coords, use.names = F));final1
+coord_y <- final1[seq_along(final1) %%2 == 0];coord_y
+coord_x <- final1[seq_along(final1) %%2 != 0];coord_x
+
+img_f_pts_est <- cbind(img_f_pts_est,coord_x,coord_y);img_f_pts_est
+
+indice = str_split(img_list[j],"/")[[1]][8];indice
+path1 = paste0(diretorio,"/Resultado","/",indice,"/Estatistica.csv");path1
+path2 = paste0(diretorio,"/Resultado/",indice,"/Geral_est.csv");path2
+path3 = paste0(diretorio,"/Resultado/",indice,"/Geral.csv");path3
+
+write.csv(uniao_final, file = path1)
+write.csv(img_f_pts_est, file = path2)
+write.csv(img_f_pts_final, file = path3)
+
+j=j+1;j
+}
+#----------------------------------------------------------------------------------#
+
