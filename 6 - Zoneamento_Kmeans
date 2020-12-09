@@ -1,0 +1,83 @@
+ Packages
+pacman::p_load(dplyr, tidyr, raster, rgdal, factoextra, gridExtra, update=F)
+
+# Setting work directory
+setwd('G:/.shortcut-targets-by-id/1n5pPrkb-mubOicT3rXng9iIlbY9JWpQO/Projeto_martello/')
+
+# Load shapefile to removes boundary effects
+shp <- readOGR('./limite/bound_UTM_final.shp')
+
+# Create list of rasters
+# What index should we use?
+NDRE_list  <- list.files(path = './INDEX/NDRE/', pattern = '.tif$', full.names = T)
+NDVI_list  <- list.files(path = './INDEX/NDVI/', pattern = '.tif$', full.names = T)
+NDWI_list  <- list.files(path = './INDEX/NDWI/', pattern = '.tif$', full.names = T)
+NDI45_list <- list.files(path = './INDEX/NDI45/', pattern = '.tif$', full.names = T)
+
+listas <- ls(pattern = 'list$')
+
+# Stack raster layers and perform k-means analysis
+km_res <- lapply(1:length(listas), function(x){
+  rstack_df    <- get(listas[x]) %>% 
+    stack() %>%
+    mask(shp) %>% 
+    as.data.frame() %>% na.omit()
+  
+  fviz_wss <- fviz_nbclust(rstack_df, kmeans, method = 'wss', k.max = 10)
+  fviz_sil <- fviz_nbclust(rstack_df, kmeans, method = 'silhouette', k.max = 10)
+  
+  tibble(Index         = stringr::str_split(listas[x], pattern = '_')[1],
+         Tot_within_ss = fviz_wss$data$y/max(fviz_wss$data$y),
+         Silhouette    = fviz_sil$data$y,
+         N_clusters    = 1:10)
+})
+
+# Organizing data and plotting results
+km_res_fim <- km_res %>% 
+  do.call(bind_rows, args=.) %>% 
+  mutate(Index = lapply(Index, function(x){x[1]}) %>% unlist(),
+         Tot_within_ss = Tot_within_ss*100) %>% 
+  gather(Method, Val, 2:3)
+
+km_res_fim$Method <- factor(km_res_fim$Method, levels = unique(km_res_fim$Method),
+                            labels = c('Total within clusters sum of squares (%)', 
+                                       'Average silhouette width'))
+
+ggplot(data = km_res_fim) +
+  geom_point(aes(x = N_clusters, y = Val, color = Index)) +
+  geom_line(aes(x = N_clusters, y = Val, color = Index)) +
+  facet_wrap(~Method, nrow=1, scales = 'free') +
+  scale_x_continuous(labels = 1:10, breaks = 1:10, minor_breaks = 1) +
+  labs(x = 'Number of clusters', y = NULL) +
+  theme(text = element_text('serif'),
+        panel.border = element_rect(fill = NA, color = 'black'),
+        strip.background = element_blank())
+
+# Final maps
+rstack_NDRE  <- get(ls(pattern = 'NDRE')) %>% stack() %>% mask(shp) %>% as.data.frame()
+rstack_NDWI  <- get(ls(pattern = 'NDWI')) %>% stack() %>% mask(shp) %>% as.data.frame()
+rstack_NDVI  <- get(ls(pattern = 'NDVI')) %>% stack() %>% mask(shp) %>% as.data.frame()
+rstack_NDI45 <- get(ls(pattern = 'NDI45')) %>% stack() %>% mask(shp) %>% as.data.frame()
+rs_list <- list(rstack_NDRE, rstack_NDVI, rstack_NDWI, rstack_NDI45)
+names   <- c('NDRE', 'NDVI', 'NDWI', 'NDI45')
+
+ggList <- lapply(1:4, FUN = function(xx){
+  rs <- rs_list[[xx]]
+  km_final <- kmeans(na.omit(rs), centers = 2, iter.max = 500, nstart = 25)
+  
+  clusters <- raster(get(listas[1])[1]) %>% mask(shp)
+  clusters[!is.na(clusters)] <- km_final$cluster
+  
+  
+  ggplot(data = clusters %>% mask(shp) %>% rasterToPoints() %>% as_tibble()) +
+    geom_tile(aes(x = x, y = y, fill = as.factor(X01.02.2019))) +
+    scale_fill_manual(name = 'Clusters', values = c('steelblue', 'orangered')) +
+    coord_fixed() +
+    labs(x = 'Longitude', y = 'Latitude', subtitle = names[xx]) +
+    theme_void() +
+    theme(text = element_text('serif'),
+          # panel.border = element_rect(fill = NA, color = 'black'),
+          strip.background = element_blank())
+})
+
+arrangeGrob(grobs = ggList, nrow=2) %>% grid.arrange()
