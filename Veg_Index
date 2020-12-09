@@ -1,0 +1,973 @@
+library(rgdal)
+library(raster)
+library(SciViews)
+library(stringr)
+
+# Definicao das constantes:
+# Dirotorio raiz:
+
+diretorio = 'G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/';diretorio
+setwd(diretorio)
+## Load packages
+
+limite = readOGR(file.choose());limite
+
+# Define a pasta com as imagens:
+img_dir = paste0(diretorio,"/INDEX/NDVI/");img_dir
+# Define as datas das imagens:
+img_dia_2015 = list.files(img_dir, full.names = T,pattern = "2015");img_dia_2015
+img_dia_2016 = list.files(img_dir, full.names = T,pattern = "2016");img_dia_2016
+img_dia_2017 = list.files(img_dir, full.names = T,pattern = "2017");img_dia_2017
+img_dia_2018 = list.files(img_dir, full.names = T,pattern = "2018");img_dia_2018
+img_dia_2019 = list.files(img_dir, full.names = T,pattern = "2019");img_dia_2019
+img_dia_2020 = list.files(img_dir, full.names = T,pattern = "2020");img_dia_2020
+img_dia = c(img_dia_2015,img_dia_2016,img_dia_2017,img_dia_2018,img_dia_2019,img_dia_2020);img_dia
+
+lista_clean  = gsub(".tif","",list.files(paste0(diretorio,"INDEX/","/NDVI/")));lista_clean
+img_dia = paste0(img_dir,"/",lista_clean);img_dia
+
+lista_2015  = list.files(paste0(diretorio,"INDEX/","/NDVI/"),pattern = "2015");lista_2015
+lista_2016  = list.files(paste0(diretorio,"INDEX/","/NDVI/"),pattern = "2016");lista_2016
+lista_2017  = list.files(paste0(diretorio,"INDEX/","/NDVI/"),pattern = "2017");lista_2017
+lista_2018  = list.files(paste0(diretorio,"INDEX/","/NDVI/"),pattern = "2018");lista_2018
+lista_2019  = list.files(paste0(diretorio,"INDEX/","/NDVI/"),pattern = "2019");lista_2019
+lista_2020  = list.files(paste0(diretorio,"INDEX/","/NDVI/"),pattern = "2020");lista_2020
+
+dir.create(paste0(diretorio,"INDEX/","/NDVI/"))
+dir.create(paste0(diretorio,"INDEX/","/NDRE/"))
+dir.create(paste0(diretorio,"INDEX/","/MSI/"))
+dir.create(paste0(diretorio,"INDEX/","/SR/")) 
+dir.create(paste0(diretorio,"INDEX/","/NDWI/"))
+dir.create(paste0(diretorio,"INDEX/","/GNDVI/"))
+dir.create(paste0(diretorio,"INDEX/","/EVI/"))
+dir.create(paste0(diretorio,"INDEX/","/SAVI/"))
+dir.create(paste0(diretorio,"INDEX/","/IAF/"))
+dir.create(paste0(diretorio,"INDEX/","/NDI45/"))
+dir.create(paste0(diretorio,"INDEX/","/RVI/"))
+dir.create(paste0(diretorio,"INDEX/","/S2REP/"))
+dir.create(paste0(diretorio,"INDEX/","/IRECI/"))
+dir.create(paste0(diretorio,"INDEX/","/CHLRE/"))
+dir.create(paste0(diretorio,"INDEX/","/ARVI/"))
+dir.create(paste0(diretorio,"INDEX/","/WDRVI/"))
+dir.create(paste0(diretorio,"INDEX/","/GCI/"))
+dir.create(paste0(diretorio,"INDEX/","/RECI/"))
+dir.create(paste0(diretorio,"INDEX/","/MTCI/"))
+dir.create(paste0(diretorio,"INDEX/","/RENDVI/"))
+
+diretorio = 'G:/Shared drives/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/INDEX/';diretorio
+#----------------------------------NDVI--------------------------------------------------------------#
+
+j = 1
+i = 1
+
+
+  
+
+while(i <= length(img_dia)) {
+    
+  skip_to_next <- FALSE
+    
+   total <- list.files(img_dia[i], full.names = TRUE);total
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B4,interesse_B8);interesse
+  
+  
+  names(interesse) = c('R','NIR');interesse
+  
+  r1 <- raster(interesse["R"]);r1
+  r2 <- raster(interesse["NIR"]);r2
+  
+  #r1_resample <- raster::resample(r1, r2);r1_resample
+  #r2_resample <- raster::resample(r2, r1);r2_resample
+  
+  
+  rst <- raster::stack(r2, r1);rst
+  
+  #rst <- raster::stack(r2_resample, r1_resample);rst
+  
+  names(rst) = c('RED', 'NIR')
+  class(rst)
+  
+  rst <- raster::stack(interesse);rst
+  
+  rst_mask = mask(crop(rst, limite), limite)
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$ndvi = (rst_mask$NIR - rst_mask$R)/(rst_mask$NIR + rst_mask$R)
+  
+  out <- paste0(diretorio,"/NDVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["ndvi"]], out,format = 'GTiff',overwrite = T)
+  i = i+1;i
+  
+  tryCatch(print(b), error = function(e) { skip_to_next <<- TRUE})
+  
+  if(skip_to_next) { next }     
+}
+
+
+#----------------------------------NDRE--------------------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  
+  interesse_B5 <- str_subset(total, pattern = "B0[5]");interesse_B5
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B5 <- interesse_B5[1];interesse_B5
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B5,interesse_B8);interesse
+  
+  names(interesse) = c('REDEDGE','NIR');interesse
+  
+  r1 <- raster(interesse["REDEDGE"]);r1
+  r2 <- raster(interesse["NIR"]);r2
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r1_resample <- raster::resample(r1_crop, r2_crop);r1_resample
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r2_crop, r1_resample);rst
+  
+  
+  names(rst) = c('NIR','REDEDGE');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$ndre = (rst_mask$NIR - rst_mask$REDEDGE) / (rst_mask$NIR + rst_mask$REDEDGE)
+  
+  
+  out <- paste0(diretorio,"/NDRE/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["ndre"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------MSI---------------------------------------------------#
+
+i=1;
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  interesse_B11 <- str_subset(total, pattern = "B[11]");interesse_B11
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B11 <- interesse_B11[1];interesse_B11
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B8,interesse_B11);interesse
+  
+  
+  names(interesse) = c('NIR','SWIR');interesse
+  
+  r1 <- raster(interesse["SWIR"]);r1
+  r2 <- raster(interesse["NIR"]);r2
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r1_resample <- raster::resample(r1_crop, r2_crop);r1_resample
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r2_crop, r1_resample);rst
+  
+  
+  names(rst) = c('NIR','SWIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$MSI = (rst_mask$SWIR/rst_mask$NIR)
+  
+  
+  out <- paste0(diretorio,"/MSI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["MSI"]], out,format = 'GTiff',overwrite = T)
+  
+  i=i+1;i
+}
+
+#--------------------------------------------SR---------------------------------------------------#
+
+i = 1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B4,interesse_B8);interesse
+  
+  names(interesse) = c('RED','NIR');interesse
+  
+  r1 <- raster(interesse["RED"]);r1
+  r2 <- raster(interesse["NIR"]);r2
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r2_crop, r1_crop);rst
+  
+  
+  names(rst) = c('NIR','RED');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$SR = (rst_mask$NIR/rst_mask$RED)
+  
+  
+  out <- paste0(diretorio,"/SR/" ,basename(img_dia[i]));out
+  
+  
+  writeRaster(rst_mask[["SR"]], out,format = 'GTiff',overwrite = T)
+  i = i+1;i
+}
+
+#--------------------------------------------NDWI---------------------------------------------------#
+
+i=1;i
+
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  interesse_B11 <- str_subset(total, pattern = "B[11]");interesse_B11
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B11 <- interesse_B11[1];interesse_B11
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B8,interesse_B11);interesse
+  
+  names(interesse) = c('NIR','SWIR');interesse
+  
+  r1 <- raster(interesse["NIR"]);r1
+  r2 <- raster(interesse["SWIR"]);r2
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r2_resample, r1_crop);rst
+  
+  
+  names(rst) = c('SWIR','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$NDWI = ((rst_mask$NIR - rst_mask$SWIR) / (rst_mask$NIR + rst_mask$SWIR))
+  
+  
+  out <- paste0(diretorio,"/NDWI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["NDWI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------GNDvI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  interesse_B3 <- str_subset(total, pattern = "B0[3]");interesse_B3
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B3 <- interesse_B3[1];interesse_B3
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B3,interesse_B8);interesse
+  
+  names(interesse) = c('G','NIR');interesse
+  
+  r1 <- raster(interesse["G"]);r1
+  r2 <- raster(interesse["NIR"]);r2
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r2_crop, r1_crop);rst
+  
+  
+  names(rst) = c('NIR','G');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$GNDVI = ((rst_mask$NIR - rst_mask$G) / (rst_mask$NIR + rst_mask$G))
+  
+  
+  out <- paste0(diretorio,"/GNDVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["GNDVI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------EvI---------------------------------------------------#
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  interesse_B2 <- str_subset(total, pattern = "B0[2]");interesse_B2
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8A <- str_subset(total, pattern = "B0[8A]");interesse_B8A
+  
+  interesse_B2 <- interesse_B2[1];interesse_B2
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8A <- interesse_B8A[1];interesse_B8A
+  
+  interesse = c(interesse_B2,interesse_B4,interesse_B8A);interesse
+  
+  
+  names(interesse) = c('B','R','NIR');interesse
+  
+  r1 <- raster(interesse["B"]);r1
+  r2 <- raster(interesse["R"]);r2
+  r3 <- raster(interesse["NIR"]);r3
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r3_crop = mask(crop(r3, limite), limite);r3_crop
+  r3_resample <- raster::resample(r3_crop, r1_crop);r3_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop, r2_crop,r3_resample);rst
+  
+  
+  names(rst) = c('B','R','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  G = 2.5;G
+  C1 = 6;C1
+  C2 = 7.5;C2
+  L = 1;L
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$EVI = G*((rst_mask$NIR) - (rst_mask$R))/(((rst_mask$NIR)+C1*(rst_mask$R)+C2*(rst_mask$B)+L))
+  
+  
+  out <- paste0(diretorio,"/EVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["EVI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------SAvI---------------------------------------------------#
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B4,interesse_B8);interesse
+  
+  names(interesse) = c('R','NIR');interesse
+  
+  r1 <- raster(interesse["R"]);r2
+  r2 <- raster(interesse["NIR"]);r3
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop, r2_crop);rst
+  
+  
+  names(rst) = c('R','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  L = 0.428;L
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$SAVI = ((rst_mask$NIR - rst_mask$R)/((rst_mask$NIR)+(rst_mask$R)+(L)*(1+L)))
+  
+ 
+  out <- paste0(diretorio,"/SAVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["SAVI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------IAF---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B4,interesse_B8);interesse
+  
+  
+  names(interesse) = c('R','NIR');interesse
+  
+  r1 <- raster(interesse["R"]);r2
+  r2 <- raster(interesse["NIR"]);r3
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop, r2_crop);rst
+  
+  
+  names(rst) = c('R','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  L = 0.428;L
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$SAVI = ((rst_mask$NIR - rst_mask$R)/((rst_mask$NIR)+(rst_mask$R)+(L)*(1+L)))
+  rst_mask$IAF = (log((0.69-rst_mask$SAVI)/0.59))/(0.91)
+  
+  
+  out <- paste0(diretorio,"/IAF/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["IAF"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------NDI45---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total  
+ 
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B5 <- str_subset(total, pattern = "B0[5]");interesse_B5
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B5 <- interesse_B5[1];interesse_B5
+  interesse = c(interesse_B4,interesse_B5);interesse
+  
+  
+  names(interesse) = c('R','RE');interesse
+  
+  r1 <- raster(interesse["R"]);r1
+  r2 <- raster(interesse["RE"]);r2
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r2_resample, r1_crop);rst
+  
+  
+  names(rst) = c('RE','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$NDI45 = ((rst_mask$RE - rst_mask$NIR)/(rst_mask$RE + rst_mask$NIR))
+  
+  
+  out <- paste0(diretorio,"/NDI45/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["NDI45"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------RVI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total  
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B4,interesse_B8);interesse
+  names(interesse) = c('R','NIR');interesse
+  
+  r1 <- raster(interesse["R"]);r1
+  r2 <- raster(interesse["NIR"]);r2
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r2_crop, r1_crop);rst
+  
+  
+  names(rst) = c('NIR','R');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$RVI = ((rst_mask$NIR)/(rst_mask$R))
+  
+  
+  out <- paste0(diretorio,"/RVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["RVI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1
+}
+
+#--------------------------------------------S2REP---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total  
+  
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B5 <- str_subset(total, pattern = "B0[5]");interesse_B5
+  interesse_B6 <- str_subset(total, pattern = "B0[6]");interesse_B6
+  interesse_B7 <- str_subset(total, pattern = "B0[7]");interesse_B7
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B5 <- interesse_B5[1];interesse_B5
+  interesse_B6 <- interesse_B6[1];interesse_B6
+  interesse_B7 <- interesse_B7[1];interesse_B7
+  
+  interesse = c(interesse_B4,interesse_B5,interesse_B5,interesse_B6,interesse_B7);interesse
+  
+  
+  names(interesse) = c('R','RE1','RE2','RE3');interesse
+  
+  r1 <- raster(interesse["R"]);r1
+  r2 <- raster(interesse["RE1"]);r2
+  r3 <- raster(interesse["RE2"]);r3
+  r4 <- raster(interesse["RE3"]);r4
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r3_crop = mask(crop(r3, limite), limite);r3_crop
+  r4_crop = mask(crop(r4, limite), limite);r4_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  r3_resample <- raster::resample(r3_crop, r1_crop);r3_resample
+  r4_resample <- raster::resample(r4_crop, r1_crop);r4_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack( r1_crop,r2_resample,r3_resample,r4_resample);rst
+  
+  
+  names(rst) = c('R','RE1','RE2','RE3');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$S2REP = 705+35*((rst_mask$RE3+rst_mask$R)/2-rst$RE1)/(rst_mask$RE2-rst_mask$RE3)
+  
+  
+  out <- paste0(diretorio,"/S2REP/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["S2REP"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------IRECI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B5 <- str_subset(total, pattern = "B0[5]");interesse_B5
+  interesse_B6 <- str_subset(total, pattern = "B0[6]");interesse_B6
+  interesse_B7 <- str_subset(total, pattern = "B0[7]");interesse_B7
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B5 <- interesse_B5[1];interesse_B5
+  interesse_B6 <- interesse_B6[1];interesse_B6
+  interesse_B7 <- interesse_B7[1];interesse_B7
+  
+  interesse = c(interesse_B4,interesse_B5,interesse_B5,interesse_B6,interesse_B7);interesse
+  
+  names(interesse) = c('R','RE1','RE2','RE3');interesse
+  
+  r1 <- raster(interesse["R"]);r1
+  r2 <- raster(interesse["RE1"]);r2
+  r3 <- raster(interesse["RE2"]);r3
+  r4 <- raster(interesse["RE3"]);r4
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r3_crop = mask(crop(r3, limite), limite);r3_crop
+  r4_crop = mask(crop(r4, limite), limite);r4_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  r3_resample <- raster::resample(r3_crop, r1_crop);r3_resample
+  r4_resample <- raster::resample(r4_crop, r1_crop);r4_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack( r1_crop,r2_resample,r3_resample,r4_resample);rst
+  
+  
+  names(rst) = c('R','RE1','RE2','RE3');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$IRECI = rst_mask$RE3-rst_mask$R/(rst_mask$RE2-rst_mask$RE1)
+  
+  
+  out <- paste0(diretorio,"/IRECI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["IRECI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------CHLRE---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  interesse_B5 <- str_subset(total, pattern = "B0[5]");interesse_B5
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B5 <- interesse_B5[1];interesse_B5
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B5,interesse_B8);interesse
+  
+  names(interesse) = c('RE','NIR');interesse
+  
+  r1 <- raster(interesse["RE"]);r1
+  r2 <- raster(interesse["NIR"]);r2
+
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop,r2_resample);rst
+  
+  
+  names(rst) = c('RE','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$CHLRE = rst_mask$RE/rst_mask$NIR
+  
+  
+  out <- paste0(diretorio,"/CHLRE/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["CHLRE"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------ARVI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  interesse_B2 <- str_subset(total, pattern = "B0[2]");interesse_B2
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8 <- str_subset(total, pattern = "B0[8]");interesse_B8
+  
+  interesse_B2 <- interesse_B2[1];interesse_B2
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8 <- interesse_B8[1];interesse_B8
+  interesse = c(interesse_B2,interesse_B4,interesse_B8);interesse
+  
+  
+  names(interesse) = c('B','R','NIR');interesse
+  
+  r1 <- raster(interesse["B"]);r1
+  r2 <- raster(interesse["R"]);r2
+  r3 <- raster(interesse["NIR"]);r3
+  
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r3_crop = mask(crop(r3, limite), limite);r3_crop
+  #r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop,r2_crop,r3_crop);rst
+  
+  
+  names(rst) = c('B','R','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$ARVI = (rst_mask$NIR-(2*rst_mask$R-rst_mask$B))/(rst_mask$NIR+(2*rst_mask$R-rst_mask$B))
+  
+  
+  out <- paste0(diretorio,"/ARVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["ARVI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------WDRVI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8A <- str_subset(total, pattern = "B0[8A]");interesse_B8A
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8A <- interesse_B8A[1];interesse_B8A
+  interesse = c(interesse_B4,interesse_B8A);interesse
+  
+  names(interesse) = c('RED','REDEDGE');interesse
+  
+  r1 <- raster(interesse["RED"]);r1
+  r2 <- raster(interesse["REDEDGE"]);r2
+  
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop,r2_resample);rst
+  
+  
+  names(rst) = c('RED','REDEDGE');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$WDRVI = (0.2*rst$REDEDGE-rst$RED)/(0.2*rst$REDEDGE+rst$RED)
+  
+  
+  out <- paste0(diretorio,"/WDRVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["WDRVI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------GCI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  interesse_B3 <- str_subset(total, pattern = "B0[3]");interesse_B3
+  interesse_B8A <- str_subset(total, pattern = "B0[8A]");interesse_B8A
+  
+  interesse_B3 <- interesse_B3[1];interesse_B3
+  interesse_B8A <- interesse_B8A[1];interesse_B8A
+  interesse = c(interesse_B3,interesse_B8A);interesse
+  
+  names(interesse) = c('GREEN','REDEDGE');interesse
+  
+  r1 <- raster(interesse["GREEN"]);r1
+  r2 <- raster(interesse["REDEDGE"]);r2
+  
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop,r2_resample);rst
+  
+  
+  names(rst) = c('GREEN','REDEDGE');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$GCI = ((rst$REDEDGE/rst$GREEN)-1)
+  
+  
+  out <- paste0(diretorio,"/GCI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["GCI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------GCI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B8A <- str_subset(total, pattern = "B0[8A]");interesse_B8A
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B8A <- interesse_B8A[1];interesse_B8A
+  interesse = c(interesse_B4,interesse_B8A);interesse
+  
+  names(interesse) = c('RED','REDEDGE');interesse
+  
+  r1 <- raster(interesse["RED"]);r1
+  r2 <- raster(interesse["REDEDGE"]);r2
+  
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop,r2_resample);rst
+  
+  
+  names(rst) = c('RED','REDEDGE');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$RECI = ((rst$REDEDGE/rst$RED)-1)
+  
+  
+  out <- paste0(diretorio,"/RECI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["RECI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------MTCI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  interesse_B4 <- str_subset(total, pattern = "B0[4]");interesse_B4
+  interesse_B5 <- str_subset(total, pattern = "B0[5]");interesse_B5
+  interesse_B8A <- str_subset(total, pattern = "B0[8]");interesse_B8A
+  
+  interesse_B4 <- interesse_B4[1];interesse_B4
+  interesse_B5 <- interesse_B5[1];interesse_B5
+  interesse_B8A <- interesse_B8A[1];interesse_B8A
+  interesse = c(interesse_B4,interesse_B5,interesse_B8A);interesse
+  
+  names(interesse) = c('RED','REDEDGE1','NIR');interesse
+  
+  r1 <- raster(interesse["RED"]);r1
+  r2 <- raster(interesse["REDEDGE1"]);r2
+  r3 <- raster(interesse["NIR"]);r3
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r3_crop = mask(crop(r3, limite), limite);r3_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  r3_resample <- raster::resample(r3_crop, r1_crop);r3_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop,r2_resample,r3_resample);rst
+  
+  
+  names(rst) = c('RED','REDEDGE1','NIR');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o índice a partir da imagem:
+  rst_mask$MTCI = (rst$NIR - rst$REDEDGE1)/(rst$REDEDGE1 - rst$RED)
+  
+  
+  out <- paste0(diretorio,"/MTCI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["MTCI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
+#--------------------------------------------RENDVI---------------------------------------------------#
+
+i=1;i
+
+
+while(i <= length(img_dia)) {
+  
+  
+  total <- list.files(img_dia[i], full.names = TRUE);total 
+  
+  interesse_B5 <- str_subset(total, pattern = "B0[5]");interesse_B5
+  interesse_B8A <- str_subset(total, pattern = "B0[8A]");interesse_B8A
+  
+  interesse_B5 <- interesse_B5[1];interesse_B5
+  interesse_B8A <- interesse_B8A[1];interesse_B8A
+  interesse = c(interesse_B5,interesse_B8A);interesse
+  
+  names(interesse) = c('REDEDGE1','REDEDGE2');interesse
+  
+  r1 <- raster(interesse["REDEDGE1"]);r1
+  r2 <- raster(interesse["REDEDGE2"]);r2
+  
+  r1_crop = mask(crop(r1, limite), limite);r1_crop
+  r2_crop = mask(crop(r2, limite), limite);r2_crop
+  r2_resample <- raster::resample(r2_crop, r1_crop);r2_resample
+  
+  #rst <- raster::stack(r2, r1);rst
+  
+  rst <- raster::stack(r1_crop,r2_resample);rst
+  
+  
+  names(rst) = c('REDEDGE1','REDEDGE2');rst
+  class(rst)
+  rst_mask = rst;rst_mask
+  # Calcula o NDVI a partir da imagem:
+  rst_mask$RENDVI = (rst$REDEDGE2 - rst$REDEDGE1)/(rst$REDEDGE2 + rst$REDEDGE1)
+  
+  
+  out <- paste0(diretorio,"/RENDVI/" ,basename(img_dia[i]));out
+  
+  writeRaster(rst_mask[["RENDVI"]], out,format = 'GTiff',overwrite = T)
+  i=i+1;i
+}
+
