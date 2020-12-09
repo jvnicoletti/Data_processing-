@@ -1,0 +1,56 @@
+library(rgdal)
+library(stringr)
+library(filesstrings)
+
+
+
+# Definicao das constantes:
+# Dirotorio raiz:
+
+diretorio = 'G:\\Shared Drives\\Servidor gMAP\\Membros da Graduação\\Kulto\\Projeto_martello\\Sentinel';diretorio
+## Load packages
+
+
+
+# Define as datas das imagens:
+img_dia = list.files(diretorio, full.names = F,pattern = '.zip');img_dia
+img_dia2 = list.files(diretorio, full.names = F,pattern = ".SAFE");img_dia2
+img_dia = gsub(".zip","",img_dia);img_dia
+img_dia2 = gsub(".SAFE","",img_dia2);img_dia2
+img_diff = as.data.frame(setdiff(img_dia,img_dia2));img_diff
+View(img_diff)
+
+lista_pastas <- list.files(file.path(diretorio)); lista_pastas
+i <- seq_along(lista_pastas);i
+
+
+#primeiro descomprimir
+
+  
+  for(j in img_dia) {
+    #unzip2 <- gzfile(file.path(file.path(diretorio2,i,PASTA1,j)), "rt")
+    dirSalvar <- "G:\\Drives compartilhados\\Servidor gMAP\\Membros da Graduação\\Kulto\\Projeto_martello\\Unzip\\";dirSalvar
+    NOME_PASTA <- str_sub(list(str_split(j,'_'))[[1]][[1]][8],1,8);NOME_PASTA
+    ano <- str_sub((str_split(NOME_PASTA,'_')),0,4);ano
+    mes <- str_sub((str_split(NOME_PASTA,'_')),5,6);mes
+    dia <- str_sub((str_split(NOME_PASTA,'_')),7,8);dia
+    data <- paste0(dia,"-",mes,"-",ano);data
+    dirSalvar <- paste0(dirSalvar,data,"\\");dirSalvar
+    dir.create(dirSalvar) 
+    gzfile(file.path(j), "zip" )
+    untar(j,compressed= "gzip", exdir = dirSalvar)
+    
+  
+  
+}
+
+  unzip <- file.path("G:/Drives compartilhados/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/Unzip/");unzip
+  lista_loop <- list.files(unzip,full.names = T);lista_loop
+  
+  for(j in lista_loop) {
+    dirSalvar <- "G:/Drives compartilhados/Servidor gMAP/Membros da Graduação/Kulto/Projeto_martello/Descompactado/";dirSalvar
+    NOME_PASTA <- str_sub(list(str_split(j,'/'))[[1]][[1]][8]);NOME_PASTA
+    dirSalvar <- paste0(dirSalvar,NOME_PASTA);dirSalvar
+    dir.create(dirSalvar) 
+    j <- file.path(list.files(j,full.names = T, recursive = T, pattern =".jp2"));j
+    file.move(j,dirSalvar)}
